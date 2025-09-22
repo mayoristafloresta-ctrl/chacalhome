@@ -116,6 +116,95 @@
     q.addEventListener('input', render);
     cat.addEventListener('change', render);
     load();
-  </script>
+  </<script>
+  // Formato moneda ARS
+  const s = (n)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n||0);
+
+  // Intenta varias rutas posibles del JSON
+  async function loadData() {
+    const paths = [
+      '/data/products.json',
+      'data/products.json',
+      './data/products.json',
+      '../data/products.json'
+    ];
+    let lastErr;
+    for (const p of paths) {
+      try {
+        const res = await fetch(p, { cache: 'no-store' });
+        if (res.ok) return await res.json();
+        lastErr = new Error(`HTTP ${res.status} en ${p}`);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr;
+  }
+
+  const grid = document.getElementById('grid');
+  const q = document.getElementById('q');
+  const cat = document.getElementById('cat');
+  const markup = document.getElementById('markup');
+  let DATA = { items: [], markupPct: 50 };
+
+  function buildCats(){
+    const set = new Set(['Todas']);
+    DATA.items.forEach(p=>set.add(p.category||'General'));
+    cat.innerHTML = '';
+    [...set].forEach(c=>{
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      cat.appendChild(o);
+    });
+    cat.value = 'Todas';
+  }
+
+  function render(){
+    const term = (q.value||'').toLowerCase();
+    const cur = (cat.value||'Todas');
+    const items = DATA.items.filter(p=>{
+      const okQ = term ? (p.title?.toLowerCase().includes(term) || (p.category||'').toLowerCase().includes(term)) : true;
+      const okC = cur==='Todas' ? true : (p.category===cur);
+      return okQ && okC;
+    });
+    grid.innerHTML = '';
+    items.forEach(p=>{
+      const card = document.createElement('div');
+      card.className='card';
+      const img = document.createElement('div');
+      img.className='img';
+      img.innerHTML = `<img src="${p.image||''}" alt="${p.title||''}">`;
+      const pad = document.createElement('div');
+      pad.className='pad';
+      pad.innerHTML = `
+        <div class="muted">${p.category||'General'}</div>
+        <div><strong>${p.title||''}</strong></div>
+        <div class="strike">${p.basePrice ? s(p.basePrice) : ''}</div>
+        <div class="price">${s(p.finalPrice)}</div>
+        <button>Agregar</button>
+      `;
+      card.appendChild(img);
+      card.appendChild(pad);
+      grid.appendChild(card);
+    });
+  }
+
+  q.addEventListener('input', render);
+  cat.addEventListener('change', render);
+
+  (async () => {
+    try {
+      const json = await loadData();
+      DATA = json;
+      markup.textContent = (json.markupPct||50) + '%';
+      buildCats();
+      render();
+    } catch (err) {
+      console.error('No pude cargar /data/products.json', err);
+      grid.innerHTML = '<div style="padding:16px;color:#c00">No pude cargar los productos. Probá refrescar (Cmd+Shift+R) o confirma que existe <code>data/products.json</code> en el repo.</div>';
+    }
+  })();
+</script>
+
 </body>
 </html>
