@@ -1,0 +1,12 @@
+{
+  "name": "chacal-home-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Robot diario que extrae productos desde K-Five y actualiza data/products.json con +50%",
+  "scripts": {
+    "start": "node scrape_kfive_to_json.js"
+  },
+  "dependencies": {
+    "puppeteer": "^23.0.0"
+  }
+}

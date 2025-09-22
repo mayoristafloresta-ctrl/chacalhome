@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chacal Home</title>
+  <style>
+    body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#fafafa;color:#111;margin:0}
+    .top{background:#000;color:#fff;padding:8px 16px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    header{background:#fff;border-bottom:1px solid #e5e5e5;position:sticky;top:0;z-index:10}
+    h1{font-size:22px;margin:0;font-weight:800;letter-spacing:-0.3px}
+    .controls{display:flex;gap:8px;align-items:center;margin-left:auto}
+    input,select,button{border:1px solid #ddd;border-radius:10px;padding:8px 10px;font-size:14px}
+    button{background:#111;color:#fff;cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:16px}
+    .card{background:#fff;border:1px solid #eee;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+    .img{aspect-ratio:4/3;background:#f0f0f0}
+    .img img{width:100%;height:100%;object-fit:cover;display:block}
+    .pad{padding:12px;display:flex;flex-direction:column;gap:6px}
+    .muted{color:#666;font-size:12px;text-transform:uppercase}
+    .strike{text-decoration:line-through;color:#999;font-size:13px}
+    .price{font-size:20px;font-weight:800}
+    footer{background:#111;color:#bbb;margin-top:32px}
+    footer .wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .note{font-size:12px;color:#777}
+  </style>
+</head>
+<body>
+  <div class="top"><div>Ganancia aplicada: <span id="markup">50%</span></div><div>Chacal Home</div></div>
+  <header>
+    <div class="wrap" style="display:flex;gap:12px;align-items:center">
+      <h1>Chacal Home · Catálogo</h1>
+      <div class="controls">
+        <input id="q" placeholder="Buscar productos...">
+        <select id="cat"></select>
+      </div>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="grid" id="grid"></div>
+    <p class="note">Fuente: archivo <code>/data/products.json</code> (se actualiza con el robot diario).</p>
+  </main>
+  <footer>
+    <div class="wrap">
+      <div>
+        <h3>Chacal Home</h3>
+        <p>Distribuidora Floresta – Buenos Aires<br>WhatsApp: 11 7186-9430</p>
+      </div>
+      <div>
+        <h4>Políticas</h4>
+        <p>Mínimo de compra y envío gratis: configurar según tu operación.</p>
+      </div>
+      <div>
+        <h4>Actualización automática</h4>
+        <p>Si K‑Five cambia precios, el robot vuelve a generar <code>products.json</code> y Vercel redeploya.</p>
+      </div>
+    </div>
+  </footer>
+  <script>
+    const s = (n)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n||0);
+    const grid = document.getElementById('grid');
+    const q = document.getElementById('q');
+    const cat = document.getElementById('cat');
+    const markup = document.getElementById('markup');
+    let DATA = {items:[], markupPct:50};
+
+    async function load() {
+      const res = await fetch('../data/products.json', {cache:'no-store'});
+      const json = await res.json();
+      DATA = json;
+      markup.textContent = (json.markupPct||50) + '%';
+      render();
+      buildCats();
+    }
+    function buildCats(){
+      const set = new Set(['Todas']);
+      DATA.items.forEach(p=>set.add(p.category||'General'));
+      cat.innerHTML = '';
+      [...set].forEach(c=>{
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        cat.appendChild(o);
+      });
+      cat.value = 'Todas';
+    }
+    function render(){
+      const term = (q.value||'').toLowerCase();
+      const cur = (cat.value||'Todas');
+      const items = DATA.items.filter(p=>{
+        const okQ = term? (p.title?.toLowerCase().includes(term) || (p.category||'').toLowerCase().includes(term)) : true;
+        const okC = cur==='Todas' ? true : (p.category===cur);
+        return okQ && okC;
+      });
+      grid.innerHTML = '';
+      items.forEach(p=>{
+        const card = document.createElement('div');
+        card.className='card';
+        const img = document.createElement('div');
+        img.className='img';
+        img.innerHTML = `<img src="${p.image||''}" alt="${p.title||''}">`;
+        const pad = document.createElement('div');
+        pad.className='pad';
+        pad.innerHTML = `
+          <div class="muted">${p.category||'General'}</div>
+          <div><strong>${p.title||''}</strong></div>
+          <div class="strike">${p.basePrice ? s(p.basePrice) : ''}</div>
+          <div class="price">${s(p.finalPrice)}</div>
+          <button>Agregar</button>
+        `;
+        card.appendChild(img);
+        card.appendChild(pad);
+        grid.appendChild(card);
+      });
+    }
+    q.addEventListener('input', render);
+    cat.addEventListener('change', render);
+    load();
+  </script>
+</body>
+</html>
