@@ -1,4 +1,5 @@
-yml
+yaml
+
 name: Scrape K-Five and Update Data
 
 on:
